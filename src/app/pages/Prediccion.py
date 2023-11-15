@@ -57,8 +57,7 @@ predicciones = regressor.predict(nuevos_datos)
 
 # Columna derecha: Conjunto de datos con las primeras 5 filas
 with col2:
-    st.write("Conjunto de Datos:")
-    st.write("A continuación se muestran las primeras 5 filas del conjunto de datos como modelo:")
+    st.write("##  Conjunto de Datos de Prueba:")
 
     # Crear una tabla con Plotly solo con las primeras 5 filas
     fig = go.Figure(data=[go.Table(
@@ -73,23 +72,17 @@ with col2:
 
     st.plotly_chart(fig)
 
-
-
 # Crear un nuevo DataFrame con las predicciones
 df_predicciones = pd.DataFrame({"Productos Vendidos Predicho": predicciones})
 
 # Agregar la columna de predicciones al DataFrame original
 df_con_predicciones = pd.concat([df, df_predicciones], axis=1)
 
-# Mostrar las 5 primeras filas del DataFrame con predicciones
-st.write("Conjunto de Datos con Predicciones:")
-st.write(df_con_predicciones.head())
-
 # Crear una tabla con Plotly que incluya la columna de predicciones con formato de 2 decimales
 fig_predicciones = go.Figure(data=[go.Table(
     header=dict(values=list(df_con_predicciones.columns), fill_color='darkslategray', line_color='white', align='center'),
     cells=dict(values=[df_con_predicciones[col] if col != 'Productos Vendidos Predicho' else df_con_predicciones[col].apply(lambda x: f'{x:.2f}') for col in df_con_predicciones.columns], 
-               fill_color=['dimgray' if col != 'Productos Vendidos Predicho' else 'lightblue' for col in df_con_predicciones.columns],
+               fill_color=['dimgray' if col != 'Productos Vendidos Predicho' else 'steelblue' for col in df_con_predicciones.columns],
                line_color='white', align='center',
                format=[None if col != 'Productos Vendidos Predicho' else ',.2f' for col in df_con_predicciones.columns])
 )])
@@ -99,13 +92,18 @@ fig_predicciones.update_layout(
     margin=dict(l=0, r=0, b=0, t=0),
 )
 
-# Mostrar la tabla con predicciones debajo de los gráficos
-st.plotly_chart(fig_predicciones)
+# Dividir la página en dos columnas
+col1, col2 = st.columns(2)
 
-# Crear gráfico de dispersión entre Demanda del Producto y Productos Vendidos Predichos
-scatter_predicciones = px.scatter(df_con_predicciones, x='DEMANDA DEL PRODUCTO', y='Productos Vendidos Predicho',
-                                   title='Diagrama de Dispersión: Demanda del Producto vs Productos Vendidos Predicho',
-                                   labels={'DEMANDA DEL PRODUCTO': 'DEMANDA DEL PRODUCTO', 'Productos Vendidos Predicho': 'Productos Vendidos Predicho'})
+with col1:
+    # Mostrar la tabla con predicciones debajo de los gráficos
+    st.plotly_chart(fig_predicciones)
+with col2:
 
-# Mostrar el gráfico de dispersión
-st.plotly_chart(scatter_predicciones)
+    # Crear gráfico de dispersión entre Demanda del Producto y Productos Vendidos Predichos
+    scatter_predicciones = px.scatter(df_con_predicciones, x='DEMANDA DEL PRODUCTO', y='Productos Vendidos Predicho',
+                                    title='Diagrama de Dispersión: Demanda del Producto vs Productos Vendidos Predicho',
+                                    labels={'DEMANDA DEL PRODUCTO': 'DEMANDA DEL PRODUCTO', 'Productos Vendidos Predicho': 'Productos Vendidos Predicho'})
+
+    # Mostrar el gráfico de dispersión
+    st.plotly_chart(scatter_predicciones)
