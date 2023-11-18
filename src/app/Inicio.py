@@ -49,23 +49,17 @@ if uploaded_file is not None:
     st.write(filename)
     try:
         new_df = pd.read_excel(uploaded_file, engine="openpyxl")
-
+        new_df.columns = df.columns
         # Verificar la consistencia de las columnas y tipos de datos
         #  verifica si la cantidad de columnas no es la misma.
         if len(df.columns) != len(new_df.columns):
             st.error("Error: El archivo cargado no tiene la misma cantidad de columnas que el archivo por defecto.")
-        # verifica si los nombres de las columnas no son iguales.
-        elif all(df.columns == new_df.columns):
-            st.error("Error: El archivo cargado tiene nombres de columnas incorrectos. Corrigiendo...")
-            new_df.columns = df.columns
-            df = new_df
-            st.success("El archivo se ha cargado con éxito.")
         #  verifica si los tipos de datos de las columnas no son iguales.
         elif not df.dtypes.equals(new_df.dtypes):
             st.error("Error: El archivo cargado no tiene el mismo formato de datos que el archivo por defecto.")
         else:
             # Guardar y actualizar el nuevo DataFrame
-            new_df.to_excel("./data/Melsol-test.xlsx", index=False)
+            new_df.to_excel("data/Melsol-test.xlsx", index=False)
             df = new_df
             st.success("El archivo se ha cargado con éxito.")
     except Exception as e:
