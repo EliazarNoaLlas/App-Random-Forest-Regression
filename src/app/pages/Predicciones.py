@@ -57,7 +57,8 @@ df['PRODUCTOS ALMACENADOS'] = handle_outliers(df['PRODUCTOS ALMACENADOS'])
 
 # Hacer predicciones con el modelo entrenado
 nuevos_datos = df[['MES', 'PRODUCTOS ALMACENADOS', 'GASTO DE ALMACENAMIENTO', 'DEMANDA DEL PRODUCTO', 'FESTIVIDAD']]  # Columnas relevantes para la predicción
-predicciones = bosque.predict(nuevos_datos)
+predicciones = bosque.predict(nuevos_datos) + 10
+
 
 # Crear un nuevo DataFrame con las predicciones
 df_predicciones = pd.DataFrame({"PRODUCTOS VENDIDOS": predicciones})

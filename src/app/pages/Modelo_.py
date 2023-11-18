@@ -211,94 +211,51 @@ with col2:
     plot_gauge(rmse_value, "orange", "", "RMSE", 15)
     plot_gauge(r2_value, "red", "", "R²", 1)
 
-
 # ============================================== CARACTERISTICAS DEL MODELO ==========================================
-# Obtener características importantes del modelo (importances)
-importances = bosque.feature_importances_
+with col1:
+    col1.header("Caracteristicas del Modelo")
+    # Obtener características importantes del modelo (importances)
+    importances = bosque.feature_importances_
 
-# Crear un DataFrame para mostrar características importantes
-importances_df = pd.DataFrame({'Feature': X_train.columns, 'Importance': importances})
-importances_df = importances_df.sort_values(by='Importance', ascending=False)
+    # Crear un DataFrame para mostrar características importantes
+    importances_df = pd.DataFrame({'Feature': X_train.columns, 'Importance': importances})
+    importances_df = importances_df.sort_values(by='Importance', ascending=False)
 
-# Gráfico de barras para mostrar características importantes con Plotly Express
-bar_fig = px.bar(
-    importances_df,
-    x='Importance',
-    y='Feature',
-    orientation='h',  # Orientación horizontal
-    title="Importancia de las Características",
-    labels={'Importance': 'Importancia', 'Feature': 'Característica'},
-    color='Importance',  # Colorea las barras según la importancia
-    color_continuous_scale='Viridis',  # Puedes cambiar el esquema de color aquí
-)
+    # Gráfico de barras para mostrar características importantes con Plotly Express
+    bar_fig = px.bar(
+        importances_df,
+        x='Importance',
+        y='Feature',
+        orientation='h',  # Orientación horizontal
+        title="Importancia de las Características",
+        labels={'Importance': 'Importancia', 'Feature': 'Característica'},
+        color='Importance',  # Colorea las barras según la importancia
+        color_continuous_scale='Viridis',  # Puedes cambiar el esquema de color aquí
+    )
 
-# Ajustes adicionales para mejorar la visualización
-bar_fig.update_layout(
-    xaxis_title='Importancia',
-    yaxis_title='Característica',
-    showlegend=False,  # Oculta la leyenda, ya que el color indica la importancia
-    margin=dict(l=10, r=10, b=10, t=30),  # Ajusta los márgenes para una mejor visualización
-)
+    # Ajustes adicionales para mejorar la visualización
+    bar_fig.update_layout(
+        xaxis_title='Importancia',
+        yaxis_title='Característica',
+        showlegend=False,  # Oculta la leyenda, ya que el color indica la importancia
+        margin=dict(l=10, r=10, b=10, t=30),  # Ajusta los márgenes para una mejor visualización
+    )
 
-# Métricas de rendimiento
-mae = mean_absolute_error(y_test, y_pred)
-mse = mean_squared_error(y_test, y_pred)
-rmse = np.sqrt(mse)
-r2 = r2_score(y_test, y_pred)
-metrics_text = f"Mean Absolute Error: {mae:.2f}\nMean Squared Error: {mse:.2f}\nRoot Mean Squared Error: {rmse:.2f}\nR²: {r2:.2f}"
+    # Métricas de rendimiento
+    mae = mean_absolute_error(y_test, y_pred)
+    mse = mean_squared_error(y_test, y_pred)
+    rmse = np.sqrt(mse)
+    r2 = r2_score(y_test, y_pred)
+    metrics_text = f"Mean Absolute Error: {mae:.2f}\nMean Squared Error: {mse:.2f}\nRoot Mean Squared Error: {rmse:.2f}\nR²: {r2:.2f}"
 
-# Impresión del modelo y resultados
-st.plotly_chart(bar_fig)
+    # Impresión del modelo y resultados
+    st.plotly_chart(bar_fig)
 
-# Mostrar detalles del modelo RandomForestRegressor
-st.write("Detalles del modelo RandomForestRegressor:")
-st.write(f"Número de árboles: {bosque.n_estimators}")
-st.write(f"Profundidad máxima de los árboles: {bosque.max_depth}")
+    # Mostrar detalles del modelo RandomForestRegressor
+    st.write("Detalles del modelo RandomForestRegressor:")
+    st.write(f"Número de árboles: {bosque.n_estimators}")
 
-# ------------------------ Realizar Predicciones ---------------------------
-# Dividir la página en dos columnas
-left_column, right_column = st.columns(2)
 
-# Columna izquierda: Gráfico de dispersión
-with left_column:
-    left_column.header("Gráfico de Dispersión")
-    scatter_fig = px.scatter(df, x="PRODUCTOS ALMACENADOS", y="PRODUCTOS VENDIDOS", title="Productos Almacenados vs Productos Vendidos")
-    left_column.plotly_chart(scatter_fig)
-
-# Columna derecha: Formulario para ingresar nuevos datos y botón de predicción
-with right_column:
-    st.header("Ingresar Datos para Predicción")
-    # Filtrar las variables que no son consideradas ruido
-    variables_no_ruido = df_sin_ruido.columns
-    new_data = {
-        "MES": right_column.number_input("MES", min_value=1, max_value=100),
-        "PRODUCTOS ALMACENADOS": right_column.number_input("PRODUCTOS ALMACENADOS", min_value=0) if "PRODUCTOS ALMACENADOS" in variables_no_ruido else None,
-        "GASTO DE MARKETING": right_column.number_input("GASTO DE MARKETING", min_value=0) if "GASTO DE MARKETING" in variables_no_ruido else None,
-        "GASTO DE ALMACENAMIENTO": right_column.number_input("GASTO DE ALMACENAMIENTO", min_value=0) if "GASTO DE ALMACENAMIENTO" in variables_no_ruido else None,
-        "DEMANDA DEL PRODUCTO": right_column.number_input("DEMANDA DEL PRODUCTO", min_value=1, max_value=10) if "DEMANDA DEL PRODUCTO" in variables_no_ruido else None,
-        "FESTIVIDAD": right_column.number_input("FESTIVIDAD", min_value=0, max_value=1) if "FESTIVIDAD" in variables_no_ruido else None,
-        "PRECIO DE VENTA": right_column.number_input("PRECIO DE VENTA", min_value=0) if "PRECIO DE VENTA" in variables_no_ruido else None
-    }
-
-    # Botón para realizar predicción
-    if right_column.button("Realizar Predicción"):
-        # Filtrar las variables que no son None (aquellas que no son consideradas ruido)
-        new_data_filtered = {key: value for key, value in new_data.items() if value is not None}
-        new_data_df = pd.DataFrame(new_data_filtered, index=[0])
-        new_predictions = bosque.predict(new_data_df)
-        # Estilo del cuadro de texto
-        style = """
-            padding: 10px;
-            background-color: #001F3F; /* Color plateado o gris claro */
-            border: 2px solid #C0C0C0; /* Borde del cuadro */
-            border-radius: 5px; /* Esquinas redondeadas */
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Sombra */
-            color: #001F3F; /* Texto en azul oscuro */
-            font-size: 18px; /* Tamaño de fuente más grande */
-        """
-
-        # Imprimir predicción en el cuadro de texto con estilo
-        st.markdown(f'<div style="{style}">Predicción de Productos Vendidos: {new_predictions[0]:.2f}</div>', unsafe_allow_html=True)
 
     
 
