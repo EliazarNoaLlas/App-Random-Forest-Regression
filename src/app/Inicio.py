@@ -3,47 +3,45 @@ import numpy as np
 import streamlit as st
 import plotly.graph_objects as go
 
-# ========================  Configurar la página =================================================
+# ==========================================  Configurar la página =========================================================
 st.set_page_config(
     page_title="Análisis de Ventas",
     page_icon=":chart_with_upwards_trend:",
     layout="wide"
 )
-# ========================  Configurar la página =================================================
+#============================================================================================================================
+# ==========================================  Baner =========================================================================
+# Cargar el componente de BannerPersonalizado.html
+with open("utils/Baner.html", "r", encoding="utf-8") as file:
+    custom_banner_html = file.read()
 
-# ========================  Baner =================================================
+# Agregar estilos CSS desde la carpeta utils
+with open("utils/Baner_style.css", "r", encoding="utf-8") as file:
+    custom_styles_css = file.read()
+# Mostrar el componente de Banner en Streamlit con los estilos CSS
+st.markdown("""
+    <style>
+        %s
+    </style>
+""" % custom_styles_css, unsafe_allow_html=True)
 
+st.markdown(custom_banner_html, unsafe_allow_html=True)
+#============================================================================================================================
 
-# Banner personalizado con título y icono
-st.markdown(
-    """
-    <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem; background-color: #d28787; border-bottom: 2px solid #ddd;">
-        <div style="display: flex; align-items: center;">
-            <img src="./images/iconAlmacen.png" alt="Icono" style="width: 24px; height: 24px; margin-right: 0.5rem;">
-            <h1 style="margin: 0;">Análisis de Ventas</h1>
-        </div>
-        <div style="display: flex;">
-            <a href="https://github.com/tu_usuario" target="_blank" style="margin-right: 1rem;">
-                <img src="https://img.icons8.com/material-outlined/24/000000/github.png" alt="GitHub" style="width: 24px; height: 24px;">
-            </a>
-            <a href="https://www.instagram.com/tu_usuario/" target="_blank">
-                <img src="https://img.icons8.com/material-outlined/24/000000/instagram-new.png" alt="Instagram" style="width: 24px; height: 24px;">
-            </a>
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-#===================== Título de la página =================================================
+# ==========================================  Titulo de la Pagina ===========================================================
 st.markdown("## :date: Cargando el conjunto de datos de entrenamiento :shopping_trolley:")
 ## espacio en la parte superior de la pagin
 st.markdown('<style>div.block-container{padding-top:1rem;}</style>',unsafe_allow_html=True)
+#============================================================================================================================
+
+
+# ================================================  Cargar Datos  ===========================================================
 
 # Componente para cargar el conjunto de datos
 uploaded_file = st.file_uploader(":file_folder: Cargar un archivo Excel", type=["xlsx", "xls"])
 
-df = pd.read_excel("./data/Melsol-test.xlsx", engine="openpyxl")
+# Leer el conjunto de datos por defecto
+df = pd.read_excel("data/Melsol-test.xlsx", engine="openpyxl")
 
 # Carga el archivo y crea un DataFrame si se ha cargado un archivo
 if uploaded_file is not None:
@@ -53,10 +51,21 @@ if uploaded_file is not None:
         new_df = pd.read_excel(uploaded_file, engine="openpyxl")
 
         # Verificar la consistencia de las columnas y tipos de datos
-        if not df.columns.equals(new_df.columns) or not df.dtypes.equals(new_df.dtypes):
-            st.error("Error: El archivo cargado no tiene el mismo formato que el archivo por defecto.")
-            st.error("El archivo debe tener las mismas columnas y tipos de datos para cada columna.")
+        #  verifica si la cantidad de columnas no es la misma.
+        if len(df.columns) != len(new_df.columns):
+            st.error("Error: El archivo cargado no tiene la misma cantidad de columnas que el archivo por defecto.")
+        # verifica si los nombres de las columnas no son iguales.
+        elif all(df.columns == new_df.columns):
+            st.error("Error: El archivo cargado tiene nombres de columnas incorrectos. Corrigiendo...")
+            new_df.columns = df.columns
+            df = new_df
+            st.success("El archivo se ha cargado con éxito.")
+        #  verifica si los tipos de datos de las columnas no son iguales.
+        elif not df.dtypes.equals(new_df.dtypes):
+            st.error("Error: El archivo cargado no tiene el mismo formato de datos que el archivo por defecto.")
         else:
+            # Guardar y actualizar el nuevo DataFrame
+            new_df.to_excel("./data/Melsol-test.xlsx", index=False)
             df = new_df
             st.success("El archivo se ha cargado con éxito.")
     except Exception as e:
@@ -87,8 +96,8 @@ if operation == "Actualizar Columna":
         # Si el botón se presiona, actualizar las columnas del conjunto de datos
         if submit_button:
             df.rename(columns=col_rename_dict, inplace=True)
+            df.to_excel("data/Melsol-test.xlsx", index=False)
             st.success("Nombres de columnas actualizados.")
-
 # Resto de las operaciones
 else:
     if operation == "Crear Fila":
@@ -112,7 +121,7 @@ else:
             if st.button("Crear Fila"):
                 # Agregar la nueva fila al conjunto de datos
                 df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-                df.to_excel("./data/Melsol-test.xlsx", index=False)
+                df.to_excel("data/Melsol-test.xlsx", index=False)
                 st.success("Nueva fila creada con éxito.")
 
     elif operation == "Actualizar Fila":
@@ -136,7 +145,7 @@ else:
             if st.button("Actualizar Fila"):
                 # Actualizar la fila seleccionada en el conjunto de datos
                 df.loc[row_to_update] = updated_row
-                df.to_excel("./data/Melsol-test.xlsx", index=False)
+                df.to_excel("data/Melsol-test.xlsx", index=False)
                 st.success("Fila actualizada con éxito.")
 
     # Operación Eliminar Fila
@@ -158,7 +167,7 @@ else:
             # Si se presiona el botón, eliminar la fila seleccionada del conjunto de datos
             if submit_delete_button:
                 df = df.drop(row_to_delete).reset_index(drop=True)
-                df.to_excel("./data/Melsol-test.xlsx", index=False)
+                df.to_excel("data/Melsol-test.xlsx", index=False)
                 st.success("Fila eliminada con éxito.")
 
 # ================================= Componente para mostrar el conjunto de datos =============================

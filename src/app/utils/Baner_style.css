@@ -1,0 +1,24 @@
+/* styles.css */
+#custom-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    background-color: #d28787;
+    border-bottom: 2px solid #ddd;
+}
+
+#banner-content {
+    display: flex;
+    align-items: center;
+}
+
+#banner-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 0.5rem;
+}
+
+h1 {
+    margin: 0;
+}

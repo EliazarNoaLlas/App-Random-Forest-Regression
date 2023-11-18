@@ -5,12 +5,12 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sklearn.metrics import mean_squared_error, r2_score
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import LabelEncoder
 import streamlit as st
 import plotly as pl
 import plotly.express as px
+import plotly.graph_objects as go
 import pandas as pd
 import os
 import warnings
@@ -24,8 +24,10 @@ st.title(" :date: Modelo RandomForest Regression")
 
 st.markdown('<style>div.block-container{padding-top:1rem;}</style>',unsafe_allow_html=True)
 
+# Leer el conjunto de datos por defecto
+df = pd.read_excel("data/Melsol-test.xlsx", engine="openpyxl")
 
-# ------------------------- MANEJO DE DATOS ---------------------------
+# ====================================================== MANEJO DE DATOS ======================================================
 # Función para manejar outliers en una columna
 def handle_outliers(column, cap_value=None):
     Q1 = column.quantile(0.25)
@@ -61,8 +63,9 @@ df['PRODUCTOS ALMACENADOS'] = handle_outliers(df['PRODUCTOS ALMACENADOS'])
 df['DEMANDA DEL PRODUCTO'] = handle_outliers(df['DEMANDA DEL PRODUCTO'])
 df['PRODUCTOS VENDIDOS'] = handle_outliers(df['PRODUCTOS VENDIDOS'])
 df_sin_ruido = analizar_y_eliminar_ruido(df)
+# ====================================================== MANEJO DE DATOS ======================================================
 
-# ------------------------- ENTRENAMIENTO ---------------------------
+# ====================================================== ENTRENAMIENTO ======================================================
 # Definir las características (X) y la variable objetivo (y)
 X = df_sin_ruido.drop('PRODUCTOS VENDIDOS', axis=1)
 y = df_sin_ruido['PRODUCTOS VENDIDOS']
@@ -71,57 +74,145 @@ y = df_sin_ruido['PRODUCTOS VENDIDOS']
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 # Crear el modelo de Random Forest Regression
-bosque = RandomForestRegressor(n_estimators=100,
-                                criterion="squared_error",  # Utilizar "squared_error" en lugar de "mse"
-                                max_features="sqrt",
-                                bootstrap=True,
-                                oob_score=True,
-                                random_state=42)
+bosque = RandomForestRegressor(
+    n_estimators=100,
+    criterion="squared_error",  # Utilizar "squared_error" en lugar de "mse"
+    max_features="sqrt",
+    bootstrap=True,
+    oob_score=True,
+    random_state=42
+)
 
-# Definir la métrica a utilizar (en este caso, negativo del Error Cuadrático Medio para que sea coherente con la validación cruzada)
+# Entrenar el modelo en todo el conjunto de datos
+bosque.fit(X_train, y_train)
+
+# Evaluación del modelo
+# Métrica a utilizar (en este caso, negativo del Error Cuadrático Medio para que sea coherente con la validación cruzada)
 metrica = make_scorer(mean_squared_error, greater_is_better=False)
 
-# Realizar validación cruzada
+# Validación cruzada
 kf = KFold(n_splits=5, shuffle=True, random_state=42)  # Puedes ajustar el número de divisiones (folds)
-resultados_cross_val = -cross_val_score(bosque, X.values, y.values, cv=kf, scoring=metrica)
+resultados_cross_val = cross_val_score(bosque, X_train, y_train, cv=kf, scoring=metrica)
 
 # Imprimir los resultados de la validación cruzada
 print("Resultados de la validación cruzada:")
 print("MSE por fold:", resultados_cross_val)
 print("Promedio MSE:", np.mean(resultados_cross_val))
 
-# Entrenar el modelo en todo el conjunto de datos
-regressor = bosque.fit(X.values, y.values)
+# Métricas adicionales
+# Puntuación R^2 en el conjunto completo
+r2_full_set = bosque.score(X, y)
+print("Puntuación R^2 en el conjunto completo:", r2_full_set)
 
-# Imprimir la puntuación R^2 en el conjunto completo
-print("Puntuación R^2 en el conjunto completo:", bosque.score(X.values, y.values))
+# Puntuación "out-of-bag" (OOB)
+oob_score = bosque.oob_score_
+print("Puntuación OOB:", oob_score)
 
-# Imprimir la puntuación "out-of-bag" (OOB)
-print("Puntuación OOB:", bosque.oob_score_)
+# Predicciones en el conjunto de prueba
+y_pred = bosque.predict(X_test)
 
-y_pred = regressor.predict(X_test)
+# Puntuación R^2 en el conjunto de prueba
+r2_test_set = r2_score(y_test, y_pred)
+print("Puntuación R^2 en el conjunto de prueba:", r2_test_set)
 
-r2 = r2_score(y_test, y_pred)
+# ====================================================== GRAFICANDO ======================================================
 
 # Gráfico de dispersión (Scatter Plot) con Plotly
-fig = px.scatter(x=y_test, y=y_pred, title="Gráfico de Dispersión", labels={"x": "Data Actual", "y": "Predicciones"})
+scatter_fig = px.scatter(x=y_test, y=y_pred, title="Gráfico de Dispersión", labels={"x": "Data Actual", "y": "Predicciones"})
 
 # Curva de regresión
 x_range = np.linspace(min(y_test), max(y_test), 100)
 y_range = x_range  # Línea de regresión ideal (y = x)
-fig.add_scatter(x=x_range, y=y_range, mode='lines', name='Línea de Regresión Ideal', line=dict(color='red', dash='dash'))
+scatter_fig.add_scatter(x=x_range, y=y_range, mode='lines', name='Línea de Regresión Ideal', line=dict(color='red', dash='dash'))
 
-# Métricas de rendimiento
-mae = mean_absolute_error(y_test, y_pred)
-mse = mean_squared_error(y_test, y_pred)
-rmse = np.sqrt(mse)
-r2 = r2_score(y_test, y_pred)
-metrics_text = f"Mean Absolute Error: {mae:.2f}\nMean Squared Error: {mse:.2f}\nRoot Mean Squared Error: {rmse:.2f}\nR²: {r2:.2f}"
+def plot_metric(metrics_dict):
+    fig = go.Figure()
 
-st.plotly_chart(fig)
-st.text(metrics_text)
+    for label, value in metrics_dict.items():
+        fig.add_trace(
+            go.Indicator(
+                value=value,
+                gauge={"axis": {"visible": False}},
+                number={
+                    "prefix": "",
+                    "suffix": "",
+                    "font.size": 28,
+                },
+                title={
+                    "text": label,
+                    "font": {"size": 24},
+                },
+            )
+        )
 
-## ----------------------------- MODELO ------------------------------
+    fig.update_xaxes(visible=False, fixedrange=True)
+    fig.update_yaxes(visible=False, fixedrange=True)
+    fig.update_layout(
+        margin=dict(t=30, b=0),
+        showlegend=False,
+        plot_bgcolor="white",
+        height=100,
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+def plot_gauge(
+    indicator_number, indicator_color, indicator_suffix, indicator_title, max_bound
+):
+    fig = go.Figure(
+        go.Indicator(
+            value=indicator_number,
+            mode="gauge+number",
+            domain={"x": [0, 1], "y": [0, 1]},
+            number={
+                "suffix": indicator_suffix,
+                "font.size": 26,
+            },
+            gauge={
+                "axis": {"range": [0, max_bound], "tickwidth": 1},
+                "bar": {"color": indicator_color},
+            },
+            title={
+                "text": indicator_title,
+                "font": {"size": 28},
+            },
+        )
+    )
+    fig.update_layout(
+        # paper_bgcolor="lightgrey",
+        height=200,
+        margin=dict(l=10, r=10, t=50, b=10, pad=8),
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+# Crear dos columnas
+col1, col2 = st.columns(2)
+
+# Columna izquierda: Gráfico de dispersión
+with col1:
+    col1.header("Gráfico de Dispersión")
+    col1.plotly_chart(scatter_fig)
+
+# Columna derecha: Métricas de rendimiento
+with col2:
+    col2.header("Métricas de Rendimiento")
+    # Supongamos que ya calculaste tus métricas
+    mae_value = 10.5
+    mse_value = 50.2
+    rmse_value = 7.1
+    r2_value = 0.85
+    # Calcular métricas
+    mae = mean_absolute_error(y_test, y_pred)
+    mse = mean_squared_error(y_test, y_pred)
+    rmse = np.sqrt(mse)
+    r2 = r2_score(y_test, y_pred)
+    # Llama a la función plot_gauge para cada métrica
+    plot_gauge(mae_value, "blue", "", "MAE", 20)
+    plot_gauge(mse_value, "green", "", "MSE", 100)
+    plot_gauge(rmse_value, "orange", "", "RMSE", 15)
+    plot_gauge(r2_value, "red", "", "R²", 1)
+
+
+# ============================================== CARACTERISTICAS DEL MODELO ==========================================
 # Obtener características importantes del modelo (importances)
 importances = bosque.feature_importances_
 

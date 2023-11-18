@@ -1,14 +1,14 @@
 import streamlit as st
-from Inicio import df
 import plotly.express as px
-
+import pandas as pd
 st.set_page_config(
     page_title="eda",
     page_icon="👋",
 )
 
 st.write("# Análisis Exploratorio de Datos (EDA) 👋")
-
+# Leer el conjunto de datos por defecto
+df = pd.read_excel("data/Melsol-test.xlsx", engine="openpyxl")
 # Mostrar la tabla de datos
 st.write("## Conjunto de Datos Actual:")
 st.write(df)
