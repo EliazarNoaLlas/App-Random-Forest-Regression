@@ -1,5 +1,4 @@
 # ================================== Importando Librerias =============================
-from Inicio import df
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
@@ -16,16 +15,42 @@ import os
 import warnings
 from sklearn.model_selection import cross_val_score, KFold
 from sklearn.metrics import make_scorer
+from sklearn import metrics
+
 warnings.filterwarnings('ignore')
 
-# Título de la página
-st.title(" :date: Modelo RandomForest Regression")
-## espacio en la parte superior de la pagina
+# ==========================================  Configurar la página =========================================================
+st.set_page_config(
+    page_title="Modelado",
+    page_icon=":chart_with_upwards_trend:",
+    layout="wide"
+)
+#============================================================================================================================
+# Cargar el componente de BannerPersonalizado.html
+with open("./utils/Baner.html", "r", encoding="utf-8") as file:
+    custom_banner_html = file.read()
 
+# Agregar estilos CSS desde la carpeta utils
+with open("./utils/Baner_style.css", "r", encoding="utf-8") as file:
+    custom_styles_css = file.read()
+# Mostrar el componente de Banner en Streamlit con los estilos CSS
+st.markdown("""
+    <style>
+        %s
+    </style>
+""" % custom_styles_css, unsafe_allow_html=True)
+
+st.markdown(custom_banner_html, unsafe_allow_html=True)
+#============================================================================================================================
+# ==========================================  Titulo de la Pagina ===========================================================
+st.markdown("## :date: Modelo RandomForest Regression")
+## espacio en la parte superior de la pagin
 st.markdown('<style>div.block-container{padding-top:1rem;}</style>',unsafe_allow_html=True)
+#============================================================================================================================
 
+# ================================================  Cargar Datos  ===========================================================
 # Leer el conjunto de datos por defecto
-df = pd.read_excel("data/Melsol-test.xlsx", engine="openpyxl")
+df = pd.read_excel("./data/Melsol-test.xlsx", engine="openpyxl")
 
 # ====================================================== MANEJO DE DATOS ======================================================
 # Función para manejar outliers en una columna
@@ -62,6 +87,7 @@ def analizar_y_eliminar_ruido(df):
 df['PRODUCTOS ALMACENADOS'] = handle_outliers(df['PRODUCTOS ALMACENADOS'])
 df['DEMANDA DEL PRODUCTO'] = handle_outliers(df['DEMANDA DEL PRODUCTO'])
 df['PRODUCTOS VENDIDOS'] = handle_outliers(df['PRODUCTOS VENDIDOS'])
+
 df_sin_ruido = analizar_y_eliminar_ruido(df)
 # ====================================================== MANEJO DE DATOS ======================================================
 
@@ -71,12 +97,12 @@ X = df_sin_ruido.drop('PRODUCTOS VENDIDOS', axis=1)
 y = df_sin_ruido['PRODUCTOS VENDIDOS']
 
 # Dividir el conjunto de datos en entrenamiento y prueba
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=42)
 
 # Crear el modelo de Random Forest Regression
 bosque = RandomForestRegressor(
     n_estimators=100,
-    criterion="squared_error",  # Utilizar "squared_error" en lugar de "mse"
+    criterion="squared_error",
     max_features="sqrt",
     bootstrap=True,
     oob_score=True,
@@ -92,12 +118,12 @@ metrica = make_scorer(mean_squared_error, greater_is_better=False)
 
 # Validación cruzada
 kf = KFold(n_splits=5, shuffle=True, random_state=42)  # Puedes ajustar el número de divisiones (folds)
-resultados_cross_val = cross_val_score(bosque, X_train, y_train, cv=kf, scoring=metrica)
+resultados_cross_val = cross_val_score(bosque, X.values, y.values, cv=kf, scoring=metrica)
 
 # Imprimir los resultados de la validación cruzada
 print("Resultados de la validación cruzada:")
 print("MSE por fold:", resultados_cross_val)
-print("Promedio MSE:", np.mean(resultados_cross_val))
+print("Promedio MSE:", resultados_cross_val.mean())
 
 # Métricas adicionales
 # Puntuación R^2 en el conjunto completo
@@ -114,6 +140,12 @@ y_pred = bosque.predict(X_test)
 # Puntuación R^2 en el conjunto de prueba
 r2_test_set = r2_score(y_test, y_pred)
 print("Puntuación R^2 en el conjunto de prueba:", r2_test_set)
+
+mae_value = metrics.mean_absolute_error(y_test, y_pred)
+mse_value = metrics.mean_squared_error(y_test, y_pred)
+rmse_value = np.sqrt(metrics.mean_squared_error(y_test, y_pred))
+r2_value = r2_score(y_test, y_pred)
+
 
 # ====================================================== GRAFICANDO ======================================================
 
@@ -196,28 +228,56 @@ with col1:
 with col2:
     col2.header("Métricas de Rendimiento")
     # Supongamos que ya calculaste tus métricas
-    mae_value = 10.5
-    mse_value = 50.2
-    rmse_value = 7.1
-    r2_value = 0.85
+    mae_value = mae_value
+    mse_value = mse_value
+    rmse_value = rmse_value
+    r2_value = abs(r2_value)
+
     # Calcular métricas
     mae = mean_absolute_error(y_test, y_pred)
     mse = mean_squared_error(y_test, y_pred)
     rmse = np.sqrt(mse)
     r2 = r2_score(y_test, y_pred)
     # Llama a la función plot_gauge para cada métrica
-    plot_gauge(mae_value, "blue", "", "MAE", 20)
-    plot_gauge(mse_value, "green", "", "MSE", 100)
-    plot_gauge(rmse_value, "orange", "", "RMSE", 15)
+    plot_gauge(mae_value, "blue", "", "Mean Absolute Error", 20)
+    plot_gauge(mse_value, "green", "", "Mean Squared Error", 100)
+    plot_gauge(rmse_value, "orange", "", "Root Mean Squared Error", 15)
     plot_gauge(r2_value, "red", "", "R²", 1)
-
 # ============================================== CARACTERISTICAS DEL MODELO ==========================================
 with col1:
     col1.header("Caracteristicas del Modelo")
+    st.markdown("### METRICAS DEL MODELO")
+    # Estilo personalizado con HTML
+    style = """
+        <style>
+            .metrics-box {
+                background-color: #363636;
+                color: white;
+                padding: 15px;
+                border-radius: 10px;
+                border: 2px solid #2c2c2c;
+                font-family: Arial, sans-serif;
+            }
+        </style>
+    """
+
+    # Construir el texto de las métricas
+    metrics_text = f"<div class='metrics-box'>"
+    metrics_text += f"<p><strong>Mean Absolute Error (MAE):</strong> {mae:.2f}</p>"
+    metrics_text += f"<p><strong>Mean Squared Error (MSE):</strong> {mse:.2f}</p>"
+    metrics_text += f"<p><strong>Root Mean Squared Error (RMSE):</strong> {rmse:.2f}</p>"
+    metrics_text += f"<p><strong>R² (R cuadrado):</strong> {abs(r2):.2f}</p>"
+    metrics_text += "</div>"
+
+    # Agregar el estilo y las métricas al contenedor HTML
+    st.markdown(style, unsafe_allow_html=True)
+    st.markdown(metrics_text, unsafe_allow_html=True)
+
     # Obtener características importantes del modelo (importances)
     importances = bosque.feature_importances_
 
     # Crear un DataFrame para mostrar características importantes
+    st.markdown("### CARACTERISTICAS")
     importances_df = pd.DataFrame({'Feature': X_train.columns, 'Importance': importances})
     importances_df = importances_df.sort_values(by='Importance', ascending=False)
 
@@ -250,11 +310,6 @@ with col1:
 
     # Impresión del modelo y resultados
     st.plotly_chart(bar_fig)
-
-    # Mostrar detalles del modelo RandomForestRegressor
-    st.write("Detalles del modelo RandomForestRegressor:")
-    st.write(f"Número de árboles: {bosque.n_estimators}")
-
 
 
     

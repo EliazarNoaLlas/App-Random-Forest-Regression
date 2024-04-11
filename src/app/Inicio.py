@@ -59,7 +59,7 @@ if uploaded_file is not None:
             st.error("Error: El archivo cargado no tiene el mismo formato de datos que el archivo por defecto.")
         else:
             # Guardar y actualizar el nuevo DataFrame
-            new_df.to_excel("data/Melsol-test.xlsx", index=False)
+            new_df.to_excel("./data/Melsol-test.xlsx", index=False)
             df = new_df
             st.success("El archivo se ha cargado con éxito.")
     except Exception as e:
